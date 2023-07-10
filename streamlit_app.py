@@ -1,42 +1,54 @@
 import streamlit as st
-import importlib
-import glob
+import pandas as pd
+import numpy as np
+import time
+import altair as alt
 
-# Parameters
-STARTING_SLIDE = 0
-repo_path = "https://raw.githubusercontent.com/RandyUTP/prueba_streamlit/main/images"
+from urllib.error import URLError
 
-# Config and setup
-st.set_page_config(layout="wide", page_title="Pycon Chile 2021", initial_sidebar_state="collapsed")
-slide_files = sorted(glob.glob("slides/slide_*.py"))
-N = len(slide_files)
-if 'slide_number' not in st.session_state:
-	st.session_state.slide_number = STARTING_SLIDE
+from code.shared_functions import skip_echo
 
-# Upper menu
-st.sidebar.write("Slide:")
-c1, c2, c3 = st.sidebar.columns([.3, .3, .5])
-c1.write("")
-c1.write("")
-if c1.button("<") and st.session_state.slide_number>0:
-    st.session_state.slide_number -= 1
-c3.write("")
-c3.write("")
-if c3.button(">") and st.session_state.slide_number<N-1:
-    st.session_state.slide_number += 1
+def display():
+    c1, c2 = st.columns([9,1])
+    c1.title("Ejemplo - gráfico en altair")
+    show_code = c2.checkbox("Código")
 
-slide = c2.text_input("\b", value=f"{st.session_state.slide_number}")
-st.session_state.slide_number = int(slide)
-if st.session_state.slide_number>=1:
-    st.markdown("Pycon Chile: **WebApps con Streamlit : ¡más fácil que la tabla del uno, poh!**")
-if st.session_state.slide_number>=2:
-    st.markdown(f"Sebastián Flores, @sebastiandres ![]({repo_path}/github.png) ![]({repo_path}/twitter.png) ![]({repo_path}/linkedin.png) [sebastiandres.xyz](sebastiandres.xyz), Nov 2021.")
-if st.session_state.slide_number==10:
-    st.sidebar.write('Esto está en el sidebar')
-    if st.sidebar.button('Mi botón opcional'):
-        st.balloons()
+    with st.echo("above") if show_code else skip_echo():
+        # Basado en ejemplo dataframes de Streamlit
+        @st.cache
+        def get_UN_data():
+            AWS_BUCKET_URL = "http://streamlit-demo-data.s3-us-west-2.amazonaws.com"
+            df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
+            return df.set_index("Region")
 
-# Display the slides
-module_str = slide_files[st.session_state.slide_number].replace("/",".").replace(".py","")
-current_slide = importlib.import_module(module_str)
-current_slide.display()
+        df = get_UN_data()
+        with st.expander("Explorando el dataframe"):
+            st.code("df.head()")
+            st.write(df.head())
+            st.code("df.describe(include='all').T")
+            st.write(df.describe(include='all').T)
+            st.code("df.T.describe(include='all').T")
+            st.write(df.T.describe(include='all').T)
+
+        countries = st.multiselect("Elegir País(es)", list(df.index), [])
+
+        if not countries:
+            st.error("Seleccionar al menos 1 país.")
+        else:
+            data = df.loc[countries]
+            data /= 1000000.0
+            st.write("### Producción Agrícola Neta (Gross Agricultural Production) ($1000M)", data.sort_index())
+            data = data.T.reset_index()
+            data_plot = pd.melt(data, id_vars=["index"]).rename(
+                columns={"index": "year", "value": "Gross Agricultural Product ($1000M)"}
+            )
+            chart = (
+                alt.Chart(data_plot)
+                .mark_area(opacity=0.3)
+                .encode(
+                    x="year:T",
+                    y=alt.Y("Gross Agricultural Product ($1000M):Q", stack=None),
+                    color="Region:N",
+                )
+            )
+            st.altair_chart(chart, use_container_width=True)
