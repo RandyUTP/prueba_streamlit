@@ -7,7 +7,7 @@ import altair as alt
 from urllib.error import URLError
 
 from code.shared_functions import skip_echo
-st.altair_chart(altair_chart, use_container_width=False, theme="streamlit")
+
 def display():
     c1, c2 = st.columns([9,1])
     c1.title("Ejemplo - gráfico en altair")
@@ -52,3 +52,4 @@ def display():
                 )
             )
             st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(altair_chart, use_container_width=False, theme="streamlit")
