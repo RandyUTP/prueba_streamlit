@@ -4,7 +4,7 @@ import glob
 
 # Parameters
 STARTING_SLIDE = 0
-repo_path = "https://raw.githubusercontent.com/sebastiandres/talk_2021_11_pyconcl/main/images"
+repo_path = "https://raw.githubusercontent.com/RandyUTP/prueba_streamlit/main/images"
 
 # Config and setup
 st.set_page_config(layout="wide", page_title="Pycon Chile 2021", initial_sidebar_state="collapsed")
